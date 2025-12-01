@@ -1,41 +1,71 @@
 # agents/base_agent.py
 import os
-import google.generativeai as genai
+import dashscope
 from dotenv import load_dotenv
 
 # 加载环境变量
 load_dotenv()
 
-# 配置 Google API
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+# 配置 DashScope API
+dashscope.api_key = os.getenv("DASHSCOPE_API_KEY")
 
 class BaseAgent:
-    def __init__(self, name, role, model="gemini-1.5-flash"):
+    def __init__(self, name, role, model="qwen-plus"):
         self.name = name
         self.role = role
         self.model_name = model
-        # 初始化模型
-        self.model = genai.GenerativeModel(self.model_name)
 
     def get_system_prompt(self):
         """需要子类重写"""
         return "You are a helpful assistant."
 
-    def process(self, user_content):
-        """核心处理逻辑：接收用户文档，返回反馈"""
+    def process(self, user_content, context_material=None, conversation_history=None):
+        """
+        核心处理逻辑
+        :param user_content: 用户的草稿
+        :param context_material: 上传的参考资料（可选）
+        :param conversation_history: 对话历史（可选）
+        """
         try:
-            # Gemini 的 system prompt 通常放在 generation_config 或者直接拼在 prompt 前面
-            # 这里我们采用拼接的方式，或者利用 system_instruction (如果是 1.5 Pro/Flash)
+            # 构造消息列表
+            messages = [
+                {"role": "system", "content": self.get_system_prompt()}
+            ]
             
-            # 创建带 System Instruction 的新模型实例（建议做法）
-            model = genai.GenerativeModel(
-                self.model_name,
-                system_instruction=self.get_system_prompt()
+            # 如果有参考资料，注入到消息中
+            if context_material:
+                messages.append({
+                    "role": "system", 
+                    "content": (
+                        "【参考资料/背景知识】\n"
+                        "请优先基于以下提供的资料内容进行分析。如果用户的内容与资料冲突，请指出。\n"
+                        f"---开始资料---\n{context_material}\n---结束资料---\n\n"
+                    )
+                })
+            
+            # 添加对话历史（如果有）
+            if conversation_history:
+                messages.extend(conversation_history)
+            
+            # 添加当前用户内容
+            messages.append({
+                "role": "user",
+                "content": f"【用户正在撰写的文档】\n{user_content}\n\n请根据你的角色给出反馈。"
+            })
+            
+            # 发送请求
+            response = dashscope.Generation.call(
+                model=self.model_name,
+                messages=messages,
+                result_format='message'
             )
             
-            response = model.generate_content(
-                f"用户正在撰写的文档内容如下：\n\n{user_content}\n\n请根据你的角色给出简短、具体的反馈。"
-            )
-            return response.text
+            # 处理响应
+            if response.status_code == 200:
+                ai_response = response.output.choices[0]['message']['content']
+                # 返回结果和更新后的对话历史
+                return ai_response
+            else:
+                return f"Error: {response.message}"
         except Exception as e:
             return f"Error: {str(e)}"

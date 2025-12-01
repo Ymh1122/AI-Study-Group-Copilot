@@ -1,3 +1,5 @@
-openai
+dashscope
 streamlit
 python-dotenv
+pypdf
+openai
