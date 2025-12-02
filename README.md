@@ -16,7 +16,7 @@ Unlike traditional chatbots, this application adopts a **Split-Screen Workbench*
 - **💾 Context Memory:**
   - Automatically saves all discussion content to maintain continuous conversation history
   - Preserves context after page refresh or re-entry
-  - Independent conversation history for each AI agent
+  - Unified conversation history displayed in WeChat-like chat interface
   - Clear context button to delete all history records
   - Implementation using browser localStorage for persistent storage
   - JSON serialization for efficient data storage and retrieval
@@ -79,7 +79,8 @@ Create a .env file in the root directory and add your DashScope API Key:
 
 - **Context Memory System:** 
   - Implements localStorage-based persistence to maintain conversation history across page reloads
-  - Each agent maintains independent conversation history to preserve context
+  - Unified conversation history stored in a single array with sender information
+  - Chat messages displayed in WeChat-like interface with distinct bubbles for each participant
   - Automatic saving of all discussion content for continuous conversation experience
   - Clear context functionality to reset all conversation histories
 
